@@ -1,0 +1,155 @@
+---
+title: "Plots"
+output: word_document
+---
+
+```{r}
+load("C:/Users/Administrator/Documents/STAT4620/Project/fullimp.RData")
+
+```
+
+
+##Are the waves getting larger, more consistent over the past 20 years? 
+
+```{r}
+
+plotdata = subset(fullimp, fullimp$YEAR != 2022)
+
+
+ggplot(data=plotdata, mapping=aes(x=YEAR, y=VWH._h, color=YEAR)) + geom_boxplot(data = plotdata, mapping = aes(as.factor(YEAR)))+labs(title="Significant Wave Height Halifax Harbour Buoy", y="Significant Wave Height (m)", x="Year") + theme_minimal() + theme(plot.title = element_text(hjust = 0.5), legend.position="none")+scale_color_continuous(type="gradient") + scale_y_continuous(limits = c(0,15))
+
+
+ggplot(data=plotdata, mapping=aes(x=YEAR, y=VWH._l, color=YEAR)) + geom_boxplot(data = plotdata, mapping = aes(as.factor(YEAR)))+labs(title="Significant Wave Height Lahave Bank Buoy", y="Significant Wave Height (m)", x="Year") + theme_minimal() + theme(plot.title = element_text(hjust = 0.5), legend.position="none")+scale_color_continuous(type="gradient") + scale_y_continuous(limits = c(0,15))
+
+
+ggplot(data=plotdata, mapping=aes(x=YEAR, y=VWH._e, color=YEAR)) + geom_boxplot(data = plotdata, mapping = aes(as.factor(YEAR)))+labs(title="Significant Wave Height East Scotian Slope Buoy", y="Significant Wave Height (m)", x="Year") + theme_minimal() + theme(plot.title = element_text(hjust = 0.5), legend.position="none")+scale_color_continuous(type="gradient") + scale_y_continuous(limits = c(0,15))
+
+
+ggplot(data=plotdata, mapping=aes(x=YEAR, y=VWH._b, color=YEAR)) + geom_boxplot(data = plotdata, mapping = aes(as.factor(YEAR)))+labs(title="Significant Wave Height Banquereau Buoy", y="Significant Wave Height (m)", x="Year") + theme_minimal() + theme(plot.title = element_text(hjust = 0.5), legend.position="none")+scale_color_continuous(type="gradient") + scale_y_continuous(limits = c(0,15))
+
+
+#The waves do not seem to be getting larger over the past 20 years. However, 2020 was certain a significantly an above average year compared to recent years. Meanwhile we are missing data from 2016 and 2017 when the Halifax Buoy went offline. 
+
+
+```
+
+
+
+
+##Are the ocean temperatures in Atlantic Canada increasing due to changes in the Gulf Stream? - by looking at a time series plot of changes + averages
+
+```{r}
+
+#To assess if the Gulf Stream is changing, we will look at the sea surface temperatures for the buoys over the entire time series. 
+
+ggplot(data=plotdata, mapping=aes(x=YEAR, y=SSTP_h, color=YEAR)) + geom_boxplot(data = plotdata, mapping = aes(as.factor(YEAR)))+labs(title="Sea Surface Temperature Halifax Harbour Buoy", y="Sea Surface Temperature (oC)", x="Year") + theme_minimal() + theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+
+#Our data is missing clearly missing data for several of the years namely 2008, 2016, and 2020. Therefore, we will have to assess whether assess the long term changes in sea surface temperature with the other buoys.
+
+
+temp2 = data.frame(c(1:length(fullclean[,1])))
+plotdatatemp2 = cbind(temp2, fullclean$SSTP_h, fullclean$SSTP_l, fullclean$SSTP_e, fullclean$SSTP_b)
+names(plotdatatemp2) <- c("V1", "V2", "V3", "V4", "V5")
+
+ggplot(data=plotdatatemp2) + geom_line(mapping=aes(x = V1, y=V2)) +labs(title="Sea Surface Temperature Halifax Harbour Buoy", y="Sea Surface Temperature (oC)", x="")+ theme_minimal() + theme(plot.title = element_text(hjust = 0.5))+geom_abline(intercept = 20, slope = 0, color="red")+geom_abline(intercept = 0, slope = 0, color="red")
+
+ggplot(data=plotdatatemp2) + geom_line(mapping=aes(x = V1, y=V3)) +labs(title="Sea Surface Temperature Lahave Bank Buoy", y="Sea Surface Temperature (oC)", x="")+ theme_minimal() + theme(plot.title = element_text(hjust = 0.5))+geom_abline(intercept = 0, slope = 0.00003, color="red")+geom_abline(intercept = 20, slope = 0.00003, color="red")
+
+ggplot(data=plotdatatemp2) + geom_line(mapping=aes(x = V1, y=V4))+labs(title="Sea Surface Temperature Eastslope Buoy", y="Sea Surface Temperature (oC)", x="")+ theme_minimal() + theme(plot.title = element_text(hjust = 0.5))+geom_abline(intercept = 1.5, slope = 0.00003, color="red")+geom_abline(intercept = 23, slope = 0.00003, color="red")
+
+ggplot(data=plotdatatemp2[200:64933,]) + geom_line(mapping=aes(x = V1, y=V5)) +labs(title="Sea Surface Temperature Banquereau Buoy", y="Sea Surface Temperature (oC)", x="")+ theme_minimal() + theme(plot.title = element_text(hjust = 0.5))+geom_abline(intercept = 0, slope = 0.00001, color="red")+geom_abline(intercept = 21, slope = 0.00001, color="red")
+
+#The 4 time series we have plotted begin in 2004 ending in January 2022. All 4 buoys contained recording errors during the span and had to be removed leading to gaps in the sea surface temperature readings. Therefore, accurately assessing a trend in the sea surface temps for the 4 buoys is not feasible. However, through visual inspection we can assess whether there is a clear trend in in sea surface temperature as a result of the Gulf Stream and the Atlantic Multi-Decadal Oscillation changing. For the Halifax Harbour Buoy, we can see that the sea surface temperature has not significantly increased over the last 18 years. However, for the Lahave Bank Buoy we can see a noticable upward trend in the minimum and maximum sea surface temperatures observed with peak temperatures consistently well above 20 degrees Celsius in recent years. This is indicative of a string of above average sea surface temperatures in the potentially due to the Gulf Stream and AMO cycle as well as climate change. To validate this inference, we can cross reference the sea surface temperature trend for the Eastslope Buoy since it is not too far away. While the sea surface temperatures observed at the Eastslope Buoy are warmer than the Lahave Bank Buoy due to being further from the North American continent and being less impacted by the polar jet and Labrador Current, the noticable upward trend is also present with the same slope. This offers significant proof of the Gulf Stream and positive AMO cycle increasing sea surface temperatures off of Atlantic Canada. Lastly, 
+
+
+```
+
+
+
+
+##What month of the year produces the best quality surf for the Halifax area (waves, wind, temp) - using summary statistics
+```{r}
+
+#As an avid Nova Scotian surfer I typically look for wave height larger than 1 metre, wave period above 8 seconds meaning the waves are organized and have power, wind direction from West (270 degrees) through North (360/0 degrees) indicating the wind is blowing offshore. The sea surface then dictates what wetsuit, booties, and gloves are required while the wind speed influences what certain surf spot I try due to the amount of exposure. 
+
+
+
+#VWH Plot (wave size)
+ggplot(data=plotdata, mapping=aes(x=MONTH, y=VWH._h, color=as.factor(MONTH))) + geom_boxplot()+labs(title="Monthly Significant Wave Height Halifax Harbour", y="Significant Wave Height (m)", x="Month") + scale_x_continuous(breaks = c(1:12))+ theme_minimal() +theme(plot.title = element_text(hjust = 0.5), legend.position="none") 
+#The months December through February produce the largest waves on average for Halifax, they all have mean significant vertical wave heights over 1.25 metres with similar number of large wave event outliers reaching heights of up to around 8 metres. However, in terms of the largest possible waves, September has produced the largest wave event outliers namely due to Hurricane Season peaking during the month. In terms of the worst month of year for waves, August has a mean vertical wave height of below 1 metre with very few large outliers. This indicates that Halifax does not get substantial swell from hurricanes until September and the peak of Hurricane Season where the sea surface temperatures are at their max leading to more powerful storms that move up further into Atlantic Canada. In summary solely based on wave height data over a month, the three winter months of December, January, and February really end up tieing backing up the claim of "the Winter is the best" by experienced Nova Scotian surfers. 
+
+
+#WDIR Plot (wind direction)
+ggplot(data=plotdata, mapping=aes(x=MONTH, y=WDIR_h, color=as.factor(MONTH))) + geom_boxplot()+labs(title="Monthly Wind Direction Halifax Harbour", y="Wind Direction (degrees)", x="Month") + scale_x_continuous(breaks = c(1:12))+ theme_minimal() +theme(plot.title = element_text(hjust = 0.5), legend.position="none") 
+
+#While the wind direction plot by month may seem confusing at first glance, upon further inspection, the months of January and February have means of over 250 which corresponds to roughly the WSW wind direction and are closest to the ideal wind conditions of North West to North offshore wind. This is a result of the polar jet coming down from the arctic as it sweeps across Canada causing strong North West winds and very cold air temperatures. However, as soon as spring begins we can see that the wind direction moves to just above 200 degrees or approximately South-South West on a compass creating unfavourable wind conditions for surfing. Then when we reach the summer, in July and August the variance in wind directions substantially decrease as the coastal storm activity reaches a minimum thus not causing rapid changes in wind direction as it moves through. This is also indicative of poor surfing conditions as there is no South-West, South, or South-East winds creating waves in the first place. Overall though, the months of January and February are the best months for ideal wind direction conditions followed by the fall months. 
+
+
+#VTP Plot (period)
+ggplot(data=plotdata, mapping=aes(x=MONTH, y=VTP._h, color=as.factor(MONTH))) + geom_boxplot()+labs(title="Monthly Wave Peak Period Halifax Harbour", y="Wave Spectrum Peak Period (sec)", x="Month") + scale_x_continuous(breaks = c(1:12))+ theme_minimal() +theme(plot.title = element_text(hjust = 0.5), legend.position="none") + ylim(c(5,15))
+
+#Just like with vertical wave height, the wave peak period reaches a max mean of just under 10 seconds during the winter month of February. While the months December through March are quite similar in wave period indicating that the winter is the best for longer period waves, September has significantly larger quantiles indicating that while September has lower average wave period, during a Hurricane swell there can be much longer wave period. It is not uncommon to experience a wave period of over 17 seconds during a good Hurricane swell in September. Therefore, the best month for quality waves in terms of period is really either February or September depending on if Atlantic Basin is in an active Hurricane year or if Nova Scotia is being impacted by a large number of Nor'Easters during the winter. 
+
+
+#SSTP Plot (water temp)
+ggplot(data=plotdata, mapping=aes(x=MONTH, y=SSTP_h, color=as.factor(MONTH))) + geom_boxplot()+labs(title="Monthly Sea Surface Temperature Halifax Harbour", y="Sea Surface Temperature (oC)", x="Month") + scale_x_continuous(breaks = c(1:12))+ theme_minimal() +theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+
+#Based on the data from the Halifax Buoy, it is clear that the sea surface temperature peaks during the months August or September around 16-18 Celsius, the first month of which coincides with the smallest wave heights experienced in the entire year. Therefore, while the warm sea surface temperatures are ideal for 4/3 milimeter wetsuits and no gloves and boots, August is certainly not good. However, September benefits from the influx of Hurricane swells which have significant wave height and period while still enjoying the warm sea surface temperatures courtesy of the Gulf Stream. On the other hand, from December through April, the sea surface temps are extremely cold even reaching negative values for short periods during January and February. This makes surfing in the winter in Nova Scotia incredibly challenging as 6/5 mm hooded suits, 8mm gloves, and boots are required to survive the freezing temperatures not to even mention the much larger surf experienced along the coast due to the Nor'Easters. 
+
+
+
+#In summary, February produces the best conditions for surfing on average for the Halifax region based on mean wave height of over 1.3 metres, mean wave period of almost 10 seconds, and average WSW wind direction. However, the main drawback of February for surfing is unsurprisingly the average sea surface temperature of 1 Celsius making hypothermia a real risk and surf sessions longer than 2 hours almost impossible. However, depending on a surfer's experience level, the quality of wetsuit they have, and their cold threshold, February can either be the best or worst month. For less hardcore surfers September produces decent surf, while it may be less consistent and smaller than the winter months, it is also much warmer allowing for long 4-5 hour surf sessions with only a 4/3 mm wetsuit. While we may have not objectively answered the question of which month is the best for surfing in the Halifax area for all skill levels, the question is subjective by nature due to the extreme weather we experience and the different thresholds individuals have for the cold. If a person is a experienced surfer and does does not mind the extremely cold temperatures of winter, February is the best month. However, if a person is less experienced or does not like the cold, September is the best month. 
+
+
+```
+
+##How much does the continental shelf decrease wave height and period 
+
+```{r}
+
+#To try determine if and by how much the continental shelf decreases the significant wave height and wave period we will calculate the difference between the wave height and wave period readings at the Halifax Harbour Buoy and the Lahave Bank Buoy which is situated at the edge of the continental shelf at a depth of 1300 metres as well as the Eastslope Buoy which is even further out past the shallow shelf at a depth of 4000 metres. 
+
+plotdata$diffL = plotdata$VWH._h - plotdata$VWH._l
+plotdata$diffE = plotdata$VWH._h - plotdata$VWH._e
+plotdata$perdiffL = plotdata$VTP._h - plotdata$VTP._l
+plotdata$perdiffE = plotdata$VTP._h - plotdata$VTP._e
+
+
+
+#Plots of Difference in VWH:
+plot(plotdata$diffL, main="Wave Height Difference Halifax and Lahave", ylab="Significant Wave Height Difference (m)", xlab="", ylim=c(-6,6))
+abline(h=mean(plotdata$diffL), col="red")
+
+plot(plotdata$diffE, main="Wave Height Difference Halifax and Eastslope", ylab="Significant Wave Height Difference (m)", xlab="", ylim=c(-6,6))
+abline(h=mean(plotdata$diffE), col="red")
+
+#There is a noticeable difference in the average significant wave height between the Halifax Harbour Buoy and the Lahave and Eastslope Buoys. These differences in mean amount to a decrease of -0.472341 and -0.7815962 metres respectively. However, these differences cannot be attributes solely to the continental shelf, in reality a large portion of the difference could be attributed other factors such as the storm approaching the offshore buoys first leading to large differences. While this could make our results inconclusive, the differences should somewhat balance out as when the storms pass through the swell should hit both for somewhat of an even time whether Halifax lags the offshore buoys or not. Thus, when considering the entire dataset and calculating the average, there is some evidence of the continental shelf decreasing the wave height but quantifying it would require wave physics models.  
+
+
+#Plots of Difference in VWH monthly:
+ggplot(data=plotdata, mapping=aes(x=MONTH, y=diffL, color=as.factor(MONTH))) + geom_boxplot()+labs(title="Monthly Wave Height Difference Halifax and Lahave", y="Significant Wave Height (m)", x="Month") + scale_x_continuous(breaks = c(1:12))+ theme_minimal() +theme(plot.title = element_text(hjust = 0.5), legend.position="none") + ylim(-5,5)
+
+ggplot(data=plotdata, mapping=aes(x=MONTH, y=diffE, color=as.factor(MONTH))) + geom_boxplot()+labs(title="Monthly WH Difference Halifax and Eastslope", y="Significant Wave Height (m)", x="Month") + scale_x_continuous(breaks = c(1:12))+ theme_minimal() +theme(plot.title = element_text(hjust = 0.5), legend.position="none") + ylim(-5,5)
+
+ggplot(data=plotdata, mapping=aes(x=1, y=diffE)) + geom_boxplot()+labs(title="Monthly WH Difference Halifax and Eastslope", y="Significant Wave Height (m)", x="Month") + scale_x_continuous(breaks = c(1:12))+ theme_minimal() +theme(plot.title = element_text(hjust = 0.5), legend.position="none") + ylim(-5,5)
+
+
+
+#Plots of Difference in VTP:
+plot(plotdata$perdiffL, main="Wave Period Difference Halifax and Lahave", ylab="Wave Spectrum Period Difference (sec)", xlab="", ylim=c(-15,15))
+abline(h=mean(plotdata$perdiffL), col="red")
+
+plot(plotdata$perdiffE, main="Wave Period Difference Halifax and Eastslope", ylab="Wave Spectrum Period Difference (sec)", xlab="")
+abline(h=mean(plotdata$perdiffE), col="red")
+
+#Based on both differences between the Halifax Buoy and the ones near the edge of the continental shelf, while there is variance in the difference between the locations in wave period, the average is 0 indicating that continental shelf is likely causing very little or no impact on the wave period for Halifax. The large difference outlier events are likely caused by coastal and offshore storms that either generate large waves near the shore ie. the Halifax Buoy or offshore storms which mostly impact the Lahave and Eastslope buoys. Therefore, we do not have any definitive proof of the shelf significantly impacting the wave period. 
+
+
+```
+
+
+
+
+
+
+

@@ -1,0 +1,313 @@
+---
+title: "STAT4620 Project"
+output: html_document
+---
+
+#Data Loading
+
+```{r}
+halifax = read.csv("C:\\Users\\Administrator\\Documents\\STAT4620\\Project\\c44258-HalifaxHarbour.csv")
+lahave = read.csv("C:\\Users\\Administrator\\Documents\\STAT4620\\Project\\c44150-La Have Bank.csv")
+eastslope = read.csv("C:\\Users\\Administrator\\Documents\\STAT4620\\Project\\c44137-East Scotian Slope.csv")
+banquereau = read.csv("C:\\Users\\Administrator\\Documents\\STAT4620\\Project\\c44139-Banquereau Bank.csv")
+
+#summary(halifax)
+#summary(lahave)
+#summary(eastslope)
+#summary(banquereau)
+
+#removing the columns with all NAs
+halifax = halifax[,-c(14,18,24)]
+lahave = lahave[,-c(14,18,24)]
+eastslope = eastslope[,-c(14,18,24)]
+banquereau = banquereau [,-c(14,18,24)]
+```
+
+##Data Processing for Halifax Buoy
+
+```{r}
+library(dplyr)
+
+#Lets consolidate by moving the values from the .1 variables for WDIR, WSPD, and GSPD to the non .1 wind record variables when the non .1 variables was not functioning and reported zeros.
+for (i in 1:nrow(halifax)) {
+  if ((halifax$WDIR[i]==0 & halifax$WSPD[i]==0 & halifax$GSPD[i]==0) & (halifax$WDIR.1[i]!=0 & halifax$WSPD.1[i]!=0 & halifax$GSPD.1[i]!=0)) {
+    halifax$WDIR[i] = halifax$WDIR.1[i]
+    halifax$WSPD[i] = halifax$WSPD.1[i]
+    halifax$GSPD[i] = halifax$GSPD.1[i]
+  }
+}
+
+#Now lets average the values from the 2 values for the WSPD and GSPD when both have non zero values but not WDIR because when wind direction is based on a 360 degree field and one value may be 359 and the other might be 10.
+#Thus the average of the WDIR would be incorrect if the average was taken.
+for (i in 1:nrow(halifax)) {
+  if (halifax$WDIR[i]!=0 & halifax$WSPD[i]!=0 & halifax$GSPD[i]!=0 & halifax$WDIR.1[i]!=0 & halifax$WSPD.1[i]!=0 & halifax$GSPD.1[i]!=0) {
+    halifax$WSPD[i] = (halifax$WSPD[i] + halifax$WSPD.1[i])/2
+    halifax$GSPD[i] = (halifax$GSPD[i] + halifax$GSPD.1[i])/2 
+  }
+}
+
+#Lets now average WDIR with a separate for loop with rules to stop the 360 and 0 direction causing false average errors.
+for (i in 1:nrow(halifax)) {
+  if (abs(halifax$WDIR[i] - halifax$WDIR.1[i]) < 300 & halifax$WDIR[i]!=0 & halifax$WDIR.1[i]!=0) {
+    halifax$WDIR[i] = (halifax$WDIR[i] + halifax$WDIR.1[i])/2
+  }
+}
+
+#Now that we have averaged and consolidated for the case when 1 or both of the wind recording devices were function for WDIR, WSPD, GSPD, WDIR.1, WSPD.1, GSPD.1 to WDIR, WSPD, and GSPD
+#lets remove the variables WDIR.1, WSPD.1, GSPD.1 from the dataset.
+halifax = subset(halifax, select = -c(WDIR.1, WSPD.1, GSPD.1))
+
+subset(halifax, ATMS==0 | ATMS.1==0)
+#Since there are none we aren't concerned about the empty values and thus we dont have to consolidate ATMS.1 to ATMS 
+
+for (i in 1:nrow(halifax)) {
+    halifax$ATMS[i] = (halifax$ATMS[i] + halifax$ATMS.1[i])/2
+    round(halifax$ATMS[i],digits=2)
+}
+
+#Now lets drop the ATMS.1 since we have averaged the two readings.
+halifax = subset(halifax, select = -c(ATMS.1))
+
+#Now that we have consolidated the data from the 2 recording devices when data was recorded at both or at 1 of the 2.
+#We must now deal with the data where both devices recorded no wind or atmospheric data.
+#We will deal with these rare situations with imputation so that we can perform a time series analysis.
+
+
+#Remove MEDS caclulated variables:
+halifax = subset(halifax, select = -c(VCAR, VTPK))
+
+
+```
+
+##Data Processing for Lahave Buoy
+
+```{r}
+
+#Lets consolidate by moving the values from the .1 variables for WDIR, WSPD, and GSPD to the non .1 wind record variables when the non .1 variables was not functioning and reported zeros.
+for (i in 1:nrow(lahave)) {
+  if ((lahave$WDIR[i]==0 & lahave$WSPD[i]==0 & lahave$GSPD[i]==0) & (lahave$WDIR.1[i]!=0 & lahave$WSPD.1[i]!=0 & lahave$GSPD.1[i]!=0)) {
+    lahave$WDIR[i] = lahave$WDIR.1[i]
+    lahave$WSPD[i] = lahave$WSPD.1[i]
+    lahave$GSPD[i] = lahave$GSPD.1[i]
+  }
+}
+
+#Now lets average the values from the 2 values for the WSPD and GSPD when both have non zero values but not WDIR because when wind direction is based on a 360 degree field and one value may be 359 and the other might be 10.
+#Thus the average of the WDIR would be incorrect if the average was taken.
+for (i in 1:nrow(lahave)) {
+  if (lahave$WDIR[i]!=0 & lahave$WSPD[i]!=0 & lahave$GSPD[i]!=0 & lahave$WDIR.1[i]!=0 & lahave$WSPD.1[i]!=0 & lahave$GSPD.1[i]!=0) {
+    lahave$WSPD[i] = (lahave$WSPD[i] + lahave$WSPD.1[i])/2
+    lahave$GSPD[i] = (lahave$GSPD[i] + lahave$GSPD.1[i])/2 
+  }
+}
+
+#Lets now average WDIR with a separate for loop with rules to stop the 360 and 0 direction causing false average errors.
+for (i in 1:nrow(lahave)) {
+  if (abs(lahave$WDIR[i] - lahave$WDIR.1[i]) < 300 & lahave$WDIR[i]!=0 & lahave$WDIR.1[i]!=0) {
+    lahave$WDIR[i] = (lahave$WDIR[i] + lahave$WDIR.1[i])/2
+  }
+}
+
+#Now that we have averaged and consolidated for the case when 1 or both of the wind recording devices were function for WDIR, WSPD, GSPD, WDIR.1, WSPD.1, GSPD.1 to WDIR, WSPD, and GSPD
+#lets remove the variables WDIR.1, WSPD.1, GSPD.1 from the dataset.
+lahave = subset(lahave, select = -c(WDIR.1, WSPD.1, GSPD.1))
+
+subset(lahave, ATMS==0 | ATMS.1==0)
+#Since there are none we aren't concerned about the empty values and thus we dont have to consolidate ATMS.1 to ATMS 
+
+for (i in 1:nrow(lahave)) {
+    lahave$ATMS[i] = (lahave$ATMS[i] + lahave$ATMS.1[i])/2
+    round(lahave$ATMS[i],digits=2)
+}
+
+#Now lets drop the ATMS.1 since we have averaged the two readings.
+lahave = subset(lahave, select = -c(ATMS.1))
+
+#Now that we have consolidated the data from the 2 recording devices when data was recorded at both or at 1 of the 2.
+#We must now deal with the data where both devices recorded no wind or atmospheric data.
+#We will deal with these rare situations with imputation so that we can perform a time series analysis.
+
+
+#Remove MEDS caclulated variables:
+lahave = subset(lahave, select = -c(VCAR, VTPK))
+
+
+```
+
+##Data Processing for Eastslope Buoy
+
+```{r}
+
+#Lets consolidate by moving the values from the .1 variables for WDIR, WSPD, and GSPD to the non .1 wind record variables when the non .1 variables was not functioning and reported zeros.
+for (i in 1:nrow(eastslope)) {
+  if ((is.na(eastslope$WDIR[i]) & is.na(eastslope$WSPD[i]) & is.na(eastslope$GSPD[i])) | is.na((eastslope$WDIR.1[i]) & is.na(eastslope$WSPD.1[i]) & is.na(eastslope$GSPD.1[i]))){
+    eastslope = eastslope
+  }
+  else if ((eastslope$WDIR[i]==0 & eastslope$WSPD[i]==0 & eastslope$GSPD[i]==0) & (eastslope$WDIR.1[i]!=0 & eastslope$WSPD.1[i]!=0 & eastslope$GSPD.1[i]!=0)) {
+    eastslope$WDIR[i] = eastslope$WDIR.1[i]
+    eastslope$WSPD[i] = eastslope$WSPD.1[i]
+    eastslope$GSPD[i] = eastslope$GSPD.1[i]
+  }
+
+#Now lets average the values from the 2 values for the WSPD and GSPD when both have non zero values but not WDIR because when wind direction is based on a 360 degree field and one value may be 359 and the other might be 10.
+#Thus the average of the WDIR would be incorrect if the average was taken.
+
+  else if ((eastslope$WDIR[i]!=0 & eastslope$WSPD[i]!=0 & eastslope$GSPD[i]!=0) & (eastslope$WDIR.1[i]!=0 & eastslope$WSPD.1[i]!=0 & eastslope$GSPD.1[i]!=0)) {
+    eastslope$WSPD[i] = (eastslope$WSPD[i] + eastslope$WSPD.1[i])/2
+    eastslope$GSPD[i] = (eastslope$GSPD[i] + eastslope$GSPD.1[i])/2 
+  }
+
+#Lets now average WDIR with a separate for loop with rules to stop the 360 and 0 direction causing false average errors.
+
+  else if (abs(eastslope$WDIR[i] - eastslope$WDIR.1[i]) < 300 & eastslope$WDIR[i]!=0 & eastslope$WDIR.1[i]!=0) {
+    eastslope$WDIR[i] = (eastslope$WDIR[i] + eastslope$WDIR.1[i])/2
+  }
+
+}
+
+#Now that we have averaged and consolidated for the case when 1 or both of the wind recording devices were function for WDIR, WSPD, GSPD, WDIR.1, WSPD.1, GSPD.1 to WDIR, WSPD, and GSPD
+#lets remove the variables WDIR.1, WSPD.1, GSPD.1 from the dataset.
+eastslope = subset(eastslope, select = -c(WDIR.1, WSPD.1, GSPD.1))
+
+subset(eastslope, ATMS==0 | ATMS.1==0)
+#Since there are none we aren't concerned about the empty values and thus we dont have to consolidate ATMS.1 to ATMS 
+
+for (i in 1:nrow(eastslope)) {
+    eastslope$ATMS[i] = (eastslope$ATMS[i] + eastslope$ATMS.1[i])/2
+    round(eastslope$ATMS[i],digits=2)
+}
+
+#Now lets drop the ATMS.1 since we have averaged the two readings.
+eastslope = subset(eastslope, select = -c(ATMS.1))
+
+#Now that we have consolidated the data from the 2 recording devices when data was recorded at both or at 1 of the 2.
+#We must now deal with the data where both devices recorded no wind or atmospheric data.
+#We will deal with these rare situations with imputation so that we can perform a time series analysis.
+
+
+#Remove MEDS caclulated variables:
+eastslope = subset(eastslope, select = -c(VCAR, VTPK))
+```
+
+
+##Data Processing for Banquereau Buoy
+
+```{r}
+
+#Lets consolidate by moving the values from the .1 variables for WDIR, WSPD, and GSPD to the non .1 wind record variables when the non .1 variables was not functioning and reported zeros.
+for (i in 1:nrow(banquereau)) {
+  if ((is.na(banquereau$WDIR[i]) & is.na(banquereau$WSPD[i]) & is.na(banquereau$GSPD[i])) | is.na((banquereau$WDIR.1[i]) & is.na(banquereau$WSPD.1[i]) & is.na(banquereau$GSPD.1[i]))){
+    banquereau = banquereau
+  }
+  else if ((banquereau$WDIR[i]==0 & banquereau$WSPD[i]==0 & banquereau$GSPD[i]==0) & (banquereau$WDIR.1[i]!=0 & banquereau$WSPD.1[i]!=0 & banquereau$GSPD.1[i]!=0)) {
+    banquereau$WDIR[i] = banquereau$WDIR.1[i]
+    banquereau$WSPD[i] = banquereau$WSPD.1[i]
+    banquereau$GSPD[i] = banquereau$GSPD.1[i]
+  }
+
+#Now lets average the values from the 2 values for the WSPD and GSPD when both have non zero values but not WDIR because when wind direction is based on a 360 degree field and one value may be 359 and the other might be 10.
+#Thus the average of the WDIR would be incorrect if the average was taken.
+
+  else if ((banquereau$WDIR[i]!=0 & banquereau$WSPD[i]!=0 & banquereau$GSPD[i]!=0) & (banquereau$WDIR.1[i]!=0 & banquereau$WSPD.1[i]!=0 & banquereau$GSPD.1[i]!=0)) {
+    banquereau$WSPD[i] = (banquereau$WSPD[i] + banquereau$WSPD.1[i])/2
+    banquereau$GSPD[i] = (banquereau$GSPD[i] + banquereau$GSPD.1[i])/2 
+  }
+
+#Lets now average WDIR with a separate for loop with rules to stop the 360 and 0 direction causing false average errors.
+
+  else if (abs(banquereau$WDIR[i] - banquereau$WDIR.1[i]) < 300 & banquereau$WDIR[i]!=0 & banquereau$WDIR.1[i]!=0) {
+    banquereau$WDIR[i] = (banquereau$WDIR[i] + banquereau$WDIR.1[i])/2
+  }
+
+}
+
+#Now that we have averaged and consolidated for the case when 1 or both of the wind recording devices were function for WDIR, WSPD, GSPD, WDIR.1, WSPD.1, GSPD.1 to WDIR, WSPD, and GSPD
+#lets remove the variables WDIR.1, WSPD.1, GSPD.1 from the dataset.
+banquereau = subset(banquereau, select = -c(WDIR.1, WSPD.1, GSPD.1))
+
+subset(banquereau, ATMS==0 | ATMS.1==0)
+#Since there are none we aren't concerned about the empty values and thus we dont have to consolidate ATMS.1 to ATMS 
+
+for (i in 1:nrow(banquereau)) {
+    banquereau$ATMS[i] = (banquereau$ATMS[i] + banquereau$ATMS.1[i])/2
+    round(banquereau$ATMS[i],digits=2)
+}
+
+#Now lets drop the ATMS.1 since we have averaged the two readings.
+banquereau = subset(banquereau, select = -c(ATMS.1))
+
+#Now that we have consolidated the data from the 2 recording devices when data was recorded at both or at 1 of the 2.
+#We must now deal with the data where both devices recorded no wind or atmospheric data.
+#We will deal with these rare situations with imputation so that we can perform a time series analysis.
+
+
+#Remove MEDS caclulated variables:
+banquereau = subset(banquereau, select = -c(VCAR, VTPK))
+
+
+#Correct the water depth for the Lahave Bank Buoy from 28 metres which is not possible given the location to 1300 metres which is reported on the National Data Buoy Center:
+
+for (i in 1:length(lahave[,1])){
+  lahave$DEPTH_l[i] = 1300
+}
+
+
+
+```
+
+
+##Rename some columns
+
+```{r}
+library(dplyr)
+colnames(halifax) <- paste(names(halifax), "h", sep = "_")
+names(halifax)[names(halifax) == "DATE_h"] = "DATE" 
+colnames(lahave) <- paste(names(lahave), "l", sep = "_")
+names(lahave)[names(lahave) == "DATE_l"] = "DATE" 
+colnames(eastslope) <- paste(names(eastslope), "e", sep = "_")
+names(eastslope)[names(eastslope) == "DATE_e"] = "DATE" 
+colnames(banquereau) <- paste(names(banquereau), "b", sep = "_")
+names(banquereau)[names(banquereau) == "DATE_b"] = "DATE" 
+```
+
+```{r}
+full = inner_join(halifax, lahave, by = "DATE") 
+full = inner_join(full, banquereau, by = "DATE") 
+full = inner_join(full, eastslope, by = "DATE")  
+#here we have combined the 4 datasets row wise, and grouped data into rows with the same value of date 
+```
+
+
+##Dividing time variable into separate columns
+
+```{r}
+#Now lets break apart the date column into separate columns representing date and time.
+Hours = format(as.POSIXct(strptime(full$DATE,"%m/%d/%Y %H:%M",tz="")) ,format = "%H:%M")
+Dates = format(as.POSIXct(strptime(full$DATE,"%m/%d/%Y %H:%M", tz="")), format= "%m/%d/%Y")
+full$TIME = Hours
+full$DAY = Dates
+
+#Now splitting the date into day, month, and year seperate columns.
+days = format(as.POSIXct(strptime(full$DAY, "%m/%d/%Y",tz="/")), format="%d")
+months = format(as.POSIXct(strptime(full$DAY, "%m/%d/%Y")), format="%m")
+years = format(as.POSIXct(strptime(full$DAY, "%m/%d/%Y")), format="%Y")
+
+full$DAY = days
+full$MONTH = months
+full$YEAR = years
+
+```
+##save the datasets as .RData files
+```{r}
+save(halifax, file = "halifax.RData")
+save(lahave, file = "lahave.RData")
+save(banquereau, file = "banquereau.RData")
+save(eastslope, file = "eastslope.RData")
+save(full, file = "full.RData")
+```
+
+
+
+
+
+

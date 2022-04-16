@@ -1,0 +1,427 @@
+---
+title: "Data exploration"
+output: html_document
+---
+
+#Data Exploration
+
+```{r}
+load("C:/Users/Administrator/Documents/STAT4620/Project/halifax.RData")
+load("C:/Users/Administrator/Documents/STAT4620/Project/banquereau.RData")
+load("C:/Users/Administrator/Documents/STAT4620/Project/eastslope.RData")
+load("C:/Users/Administrator/Documents/STAT4620/Project/lahave.RData")
+load("C:/Users/Administrator/Documents/STAT4620/Project/full.RData")
+```
+
+
+```{r}
+library(ggplot2)
+
+ggplot(data=full, mapping=aes(x=MONTH, y=VTP._e)) + geom_boxplot()
+
+ggplot(data=full, mapping=aes(x=MONTH, y=VWH._h, color=MONTH)) + geom_boxplot()+labs(title="Monthly Significant Vertical Wave Heights", y="Vertical Wave Height", x="Month")+theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+
+ggplot(data=full, mapping=aes(x=MONTH, y=SSTP_h, color=MONTH)) + geom_boxplot()+labs(title="Monthly Sea Surface Temperature", y="Sea Surface Temperature (SST)", x="Month")+theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+
+hist(full$VWH._h, main = "Histogram of Significant Vertical Wave Height",xlab="Vertical Wave Height (VWH)")
+
+
+```
+
+
+
+##Sea surface temperature imputation for values that are not possible in Nova Scotia
+```{r}
+#Inspect sea surface temperatures for the 4 buoys to look for outliers and data recording errors:
+
+ggplot(data=full, mapping=aes(x=MONTH, y=SSTP_h, color=MONTH)) + geom_boxplot()+labs(title="Monthly SST for Halifax Harbour", y="Sea Surface Temperature (SST)", x="Month")+theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+
+ggplot(data=full, mapping=aes(x=MONTH, y=SSTP_l, color=MONTH)) + geom_boxplot()+labs(title="Monthly SST for Lahave Bank", y="Sea Surface Temperature (SST)", x="Month")+theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+
+ggplot(data=full, mapping=aes(x=MONTH, y=SSTP_b, color=MONTH)) + geom_boxplot()+labs(title="Monthly SST for Banquereau Slope", y="Sea Surface Temperature (SST)", x="Month")+theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+
+ggplot(data=full, mapping=aes(x=MONTH, y=SSTP_e, color=MONTH)) + geom_boxplot()+labs(title="Monthly SST for Eastslope", y="Sea Surface Temperature (SST)", x="Month")+theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+
+#We see all sorts of massive problems with the SSTP values for the Halifax Harbour Buoy as well as the Eastslope Buoy.
+#Sea surface temperatures along the coast of Nova Scotia typically peak during August in the low 20-25 celcius range with a maximum of 30, many of the outliers recorded are way above 30 celcius. 
+#Therefore these values are data recording malfunctions by the buoy. Lets set all the values above 30 celcius for the Halifax Harbour Buoy and the Eastslope Buoy to NA so that we can impute them.
+
+seatempoutliers = subset(full, full$SSTP_h>30)
+#There seems to be some sort of recording error during 2007, 2008, 2013, 2014, 2015, and into 2016 where the buoy recorded sea surface temperature temperatures up to an impossible 100 degrees.
+
+full$SSTP_h[full$SSTP_h > 30] = NA
+
+ggplot(data=full, mapping=aes(x=MONTH, y=SSTP_h, color=MONTH)) + geom_boxplot()+labs(title="Monthly SST for Halifax Harbour", y="Sea Surface Temperature (SST)", x="Month")+theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+
+
+#However we can see that there are still a large portion of outliers that are not possible valid observation, namely for the months January, April, May, October, and December.
+
+#We will now deal with each for the Halifax month setting values not possible to NA for imputation later:
+
+#Based on https://www.seatemperature.org/north-america/canada/halifax.htm which aggregates the minimum, average, and maximum sea surface temperatures experienced in Halifax we will go through the months of the year an set values that are significantly outside the SST range. 
+
+#In January sea surface temperatures in Halifax range from (-0.1, 5.7) Celsius, therefore lets remove values 2 times the max.
+full$SSTP_h[full$SSTP_h > 2*5.7 & full$MONTH=="01"]=NA
+
+#In February SST in Halifax range from (-0.9, 2.5) Celsius, therefore lets remove values 2 times the max and the min.
+full$SSTP_h[full$SSTP_h > 2*2.5 & full$MONTH=="02"]=NA
+
+#In March SST in Halifax range from (-0.3, 2.1) Celsius, therefore lets remove values 2 times the max and the min.
+full$SSTP_h[full$SSTP_h > 2*2.1 & full$MONTH=="03"]=NA
+
+#In April SST in Halifax range from (0.1, 5.3) Celsius, therefore lets remove values 2 times the max and the min.
+full$SSTP_h[full$SSTP_h > 2*5.3 & full$MONTH=="04"]=NA
+
+#In May SST in Halifax range from (2.4, 8.1) Celsius, therefore lets remove values 2 times the max and the min.
+full$SSTP_h[full$SSTP_h > 1.75*8.1 & full$MONTH=="05"]=NA
+
+#In May SST in Halifax range from (2.4, 8.1) Celsius, therefore lets remove values 2 times the max and the min.
+full$SSTP_h[full$SSTP_h > 2*8.1 & full$MONTH=="05"]=NA
+
+#Although June does not seem to have data recording issues, there are still a few outliers close to 20 Celsius, lets inspect them.
+june_outliers = subset(full, full$SSTP_h>16 & full$MONTH=="06")
+june_outliers
+
+#The values actually seem possible since the SST values for Lahave Buoy were ~14 and ~15 for the Eastslope Buoy. Therefore, we will not remove any further outliers for June. 
+
+#There is a similar situation for July where there are only 2 remaining outliers with SST values near 30 Celsius, lets inspect them.
+july_outliers = subset(full, full$SSTP_h>25 & full$MONTH=="07")
+july_outliers
+
+august_outliers = subset(full, full$SSTP_h>25 & full$MONTH=="08")
+august_outliers
+
+
+#What is interesting about the July and August outliers is that they are from the same year as the significant June outliers just a week or two later. Therefore, it is likely that these two events were related and are part of the recording error event we already set to NA earlier. Thus, we will set both to NA.
+
+sst2014_outliers = subset(full, full$YEAR=="2014")
+sst2014_outliers
+
+#Going through SST values in 2014 for the Halifax Buoy, there seems to be a number of periods when the buoy was not working properly, possibly due to the extremely cold winter of 2014 where the ocean partially froze over. Therefore we will set the rest of the data for 2014 to NA and impute it properly. 
+
+
+full$SSTP_h[full$SSTP_h > 16 & full$MONTH=="06" & full$YEAR=="2014"]=NA
+full$SSTP_h[full$SSTP_h > 25 & full$MONTH=="07"& full$YEAR=="2014"]=NA
+full$SSTP_h[full$MONTH=="08" & full$YEAR=="2014"]=NA
+full$SSTP_h[full$MONTH=="09" & full$YEAR=="2014"]=NA
+full$SSTP_h[full$MONTH=="10" & full$YEAR=="2014"]=NA
+full$SSTP_h[full$MONTH=="11"& full$YEAR=="2014"]=NA
+full$SSTP_h[full$MONTH=="12"& full$YEAR=="2014"]=NA
+
+#Lets see if there are less obvious SST recording error outliers
+
+ggplot(data=full, mapping=aes(x=MONTH, y=SSTP_h, color=MONTH)) + geom_boxplot()+labs(title="Monthly SST for Halifax Harbour", y="Sea Surface Temperature (SST)", x="Month")+theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+
+#There are still a ton of outliers during November, lets subset the month and look for a certain period of data recording issues.
+nov_outliers = subset(full, full$SSTP_h>20 & full$MONTH=="11")
+nov_outliers
+
+#We can see that while the Halifax Buoy was reporting over 20 degrees in November, the other buoys were recording values below 12 degrees. Therefore, there was SST recording errors in November 2007. Lets inspect the year in more detail for more clear problems. 
+
+sst2007_outliers = subset(full, full$YEAR=="2007")
+sst2007_outliers
+
+#During 2007 there seems to be no malfunctions of the buoy up until November 15, when the buoy starts to flucuating from 8 to above 20 degrees which continues into December. Therefore, lets set November and December 2007 to NA.
+
+full$SSTP_h[full$MONTH=="11"& full$YEAR=="2007"]=NA
+full$SSTP_h[full$MONTH=="12"& full$YEAR=="2007"]=NA
+
+
+ggplot(data=full, mapping=aes(x=MONTH, y=SSTP_h, color=MONTH)) + geom_boxplot()+labs(title="Monthly SST for Halifax Harbour", y="Sea Surface Temperature (SST)", x="Month")+theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+
+#Lets take a closer look at the outliers in January
+
+jan_outliers = subset(full, full$SSTP_h>7 & full$MONTH=="01")
+jan_outliers
+
+#The outliers originate from 2015, lets take a look at 2015
+
+sst2015_outliers = subset(full, full$YEAR=="2015")
+sst2015_outliers
+
+#We can see that the majority of the year did not have SST values recorded after the temperature sensor broke, lets remove the observations before it broke in January.
+
+full$SSTP_h[full$MONTH=="01"& full$YEAR=="2015"]=NA
+
+#Lets take a look at the SST values that are less than -2 Celsius which is incredibly unlikely and probably another error.
+feb_outliers = subset(full, full$SSTP_h<(-2) & full$MONTH=="02")
+feb_outliers
+
+#Notice that all of these significant negative values originate from the year 2008 throughout even the summer which is a clear indication that the buoy was not functioning correctly for the entire year. Lets set the entire SST values for 2008 to NA.
+full$SSTP_h[full$YEAR=="2008"]=NA
+
+ggplot(data=full, mapping=aes(x=MONTH, y=SSTP_h, color=MONTH)) + geom_boxplot()+labs(title="Monthly SST for Halifax Harbour", y="Sea Surface Temperature (SST)", x="Month")+theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+
+
+
+
+#Next lets move on to the Eastslope Buoy
+
+jan_outliers = subset(full, full$SSTP_e>20 & full$MONTH=="01")
+jan_outliers
+
+#We can see that there the Eastslope buoy starting to record invalid results with SST values over 20 Celsius in January 2013, lets inspect the entire year for further problems.
+
+sst2013_outliers = subset(full, full$YEAR=="2013")
+sst2013_outliers
+
+#There seem to be a significant portion of 2013 SST values that a clearly not possible and are due to data recording issues. Lets set the entire years SST values to NA.
+
+full$SSTP_e[full$YEAR=="2013"]=NA
+
+ggplot(data=full, mapping=aes(x=MONTH, y=SSTP_e, color=MONTH)) + geom_boxplot()+labs(title="Monthly SST for Eastslope", y="Sea Surface Temperature (SST)", x="Month")+theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+
+#Note by removing 2013 SST values for the Eastslope Buoy there are no longer huge outliers during the months January through April. 
+
+#However, there are still a large number of outliers that are physically not possible off of Nova Scotia namely 35 Celsius SST in the summer. Lets inspect those situations for more errors.
+
+aug_outliers = subset(full, full$SSTP_e>30 & full$MONTH=="08")
+aug_outliers 
+
+#We can see that all of these huge outliers originate from August 2012, therefore, lets take a look at the entire 2012 to look for more SST recording problems.
+
+sst2012_outliers = subset(full, full$YEAR=="2012")
+sst2012_outliers
+
+#Throughout the summer of 2012, the Eastslope Buoy seems to have significant SST recording errors, lets set the SST values for the year to NA.
+
+full$SSTP_e[full$YEAR=="2012"]=NA
+
+
+ggplot(data=full, mapping=aes(x=MONTH, y=SSTP_e, color=MONTH)) + geom_boxplot()+labs(title="Monthly SST for Eastslope", y="Sea Surface Temperature (SST)", x="Month")+theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+
+
+#Now that we have dealt with 2012, and 2013 the SST values for the Eastslope Buoy look significantly better with values that are actually possible.
+
+
+#Lastly lets quickly check the outliers for Lahave Bank.
+
+jan_outliers = subset(full, full$SSTP_l>17 & full$MONTH=="01")
+jan_outliers
+
+#There possibly is a SST recording error during January 2010 as the buoy reported temperatures over 15 Celsius while the Eastslope Buoy which is nearby reported values around 5 Celsius. Lets take a better look at the entire year for Lahave Buoy and see if there was recording issues.
+
+sst2010_outliers = subset(full, full$YEAR=="2010")
+sst2010_outliers
+
+#There is a clear issue with the SST values recorded during 2010 for the Lahave Buoy, lets set them to NA. 
+full$SSTP_l[full$YEAR=="2010"]=NA
+
+
+ggplot(data=full, mapping=aes(x=MONTH, y=SSTP_l, color=MONTH)) + geom_boxplot()+labs(title="Monthly SST for Lahave Bank", y="Sea Surface Temperature (SST)", x="Month")+theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+
+
+#Lets take a look at the SST outliers in June:
+jun_outliers = subset(full, full$SSTP_l>20 & full$MONTH=="06")
+jun_outliers
+
+#There are clear recording issues in June 2020 for the Lahave Buoy while it recorded SST values greater than 20, the Eastslope nearby reported values of around 10. Therefore, lets set the SST values recorded in June to NA.
+
+full$SSTP_l[full$MONTH=="06"& full$YEAR=="2020"]=NA
+
+ggplot(data=full, mapping=aes(x=MONTH, y=SSTP_l, color=MONTH)) + geom_boxplot()+labs(title="Monthly SST for Lahave Bank", y="Sea Surface Temperature (SST)", x="Month")+theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+
+
+
+#Further Outlier Detection of SST and DRYT for the buoys:
+
+ggplot(data=full, mapping=aes(x=DRYT_h, y=SSTP_h)) + geom_point()
+ggplot(data=full, mapping=aes(x=DRYT_e, y=SSTP_e)) + geom_point()
+ggplot(data=full, mapping=aes(x=DRYT_l, y=SSTP_l)) + geom_point()
+ggplot(data=full, mapping=aes(x=DRYT_b, y=SSTP_b)) + geom_point()
+
+
+#The Eastslope Buoy does not seem to have no obvious SST and DRYT recording errors. However, there are clear signs of recording errors for the Halifax Buoy and the Banquereau Buoy. The error is possibly due to the buoy flipping from Celsius degrees to Fahrenheit for the dry bulb sensor thus recording values of 32 fahrenheit when the water SST is near 0. Therefore, we will remove all of these values for DRYT.
+
+full$DRYT_h[full$SSTP_h < 5 & full$DRYT_h > 17.5]=NA
+ggplot(data=full, mapping=aes(x=DRYT_h, y=SSTP_h)) + geom_point()
+
+full$SSTP_b[full$SSTP_b < 5 & full$DRYT_b > 13]=NA
+full$SSTP_b[full$SSTP_b < 10 & full$DRYT_b > 17.5]=NA
+full$SSTP_b[full$DRYT_b > 30]=NA
+
+
+ggplot(data=full, mapping=aes(x=DRYT_l, y=SSTP_l)) + geom_point()
+subset(full, full$DRYT_l>15 & full$SSTP_l<(-3))
+
+full$SSTP_l[full$SSTP_l > 15 & full$DRYT_l < -4]=NA
+
+
+library(GGally)
+
+ggpairs(full[,7:10])
+
+#We can see there are a large number of potential VTP recording errors by the Halifax Buoy. Lets plot VTP and inspect the outliers.
+
+ggplot(data=full, mapping=aes(x=MONTH, y=VTP._h, color=MONTH)) + geom_boxplot()+labs(title="Monthly VTP for Halifax Buoy", y="VTP (seconds)", x="Month")+theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+
+subset(full, full$VTP._h > 28)
+
+#We can see that in 2011 and 2013, the wave height sensor must have failed and did not correctly measure the VWH, VCMX, or VTP. We know this because it was recording values of 0 for VWH and VCMX and above 30 seconds for VTP while the other buoys report VWH up to 10 metres! Therefore, we must set these values to NA before imputing them later.
+
+full$VWH._h[full$VTP._h > 28]=NA
+full$VCMX_h[full$VTP._h > 28]=NA
+full$VTP._h[full$VTP._h > 28]=NA
+
+ggplot(data=full, mapping=aes(x=MONTH, y=VTP._h, color=MONTH)) + geom_boxplot()+labs(title="Monthly VTP for Halifax Buoy", y="VTP (seconds)", x="Month")+theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+
+ggpairs(full[,7:10])
+
+#Next lets inspect the strange VWH outliers of less than 3 metres while VCMX is more than 10 metres which breaks the almost perfectly linear relationship. This relationship should hold as Characteristic significant wave height (VWH) and Maximum zero crossing wave height (VCMX) are highly related to one another.
+
+subset(full, full$VWH._h < 3 & full$VCMX_h > 10)
+
+#Through cross referencing the other buoys we can see that the values of VCMX were much smaller with the VWH being similar to the Halifax Buoy, we can conclude that the VCMX values are recording errors.
+
+full$VCMX_h[full$VWH._h < 3 & full$VCMX_h > 10]=NA
+
+subset(full, full$VCMX_h > 20)
+#We can see these VWH outliers are valid data from Hurricane Dorian in 2019.
+
+ggpairs(full[,10:15])
+
+#There are no clear recording outlier problems for these variables from the Halifax Buoy. 
+
+#Lets move on to the other buoys quickly
+ggpairs(full[,21:24])
+
+#We can see that there are clear recording errors of VTP of 30 seconds just like with the Halifax Buoy. 
+subset(full, full$VTP._l >25)
+#Unsurprisingly all of these recording errors originate from one event from 2006 all the way into 2007. We will set the VTP values for these two periods to NA. 
+full$VTP._l[full$VTP._l > 25 ]=NA
+
+
+ggpairs(full[,21:24])
+
+#There are still clear 0 inflated values for VWH and VCMX for the Lahave Buoy which occured during the same period. Lets remove both.
+subset(full, full$VWH._l < 0.5 & full$VWH._e > 1)
+
+full$VWH._l[full$VWH._l < 0.5 & full$VWH._e > 1]=NA
+full$VCMX_l[full$VCMX_l < 0.5 & full$VWH._e > 1]=NA
+
+#Lets move on to the other variables for the Lahave Bank Buoy.
+ggpairs(full[,25:29])
+
+#The rest of the variable for the Lahave Bank Buoy do not show obvious recording error outliers.
+
+
+
+## Next lets move on to the Banquereau Buoy.
+ggpairs(full[,35:38])
+
+#Again we see the same recording error outliers present for the wave period VTP but not the 0 inflated VWH and VCMX issues present for the Lahave Bank Buoy.
+
+full$VTP._b[full$VTP._b > 25]=NA
+
+ggpairs(full[,39:43])
+
+#No clear signs of recording error outliers for the remaining variables for Banquereau Buoy.
+
+
+
+#Lastly lets finish the error outlier fixing for the Eastslope Buoy.
+
+ggpairs(full[,49:52])
+
+#Same problems as the other 3 buoys regarding the VTP issue.
+
+full$VTP._e[full$VTP._e > 25]=NA
+
+ggpairs(full[,53:57])
+#No clear signs of recording error outliers for the remaining variables for the Eastslope Buoy.
+
+fullclean = full
+
+```
+
+
+## Invalid Outlier Imputation
+
+```{r}
+library(mice)
+
+
+library("Amelia")
+#missmap(full[,7:15])
+
+
+#Lets now imput data for the all the outliers that we have set to NA.
+
+md.pattern(full[c(7:15)])
+md.pattern(full[c(21:29)])
+md.pattern(full[c(35:43)])
+md.pattern(full[c(49:57)])
+
+#marginplot(full[,c("DRYT_h","SSTP_h")])
+
+
+names(which(colSums(is.na(full)) > 0))
+
+#Lets now imput the missing data with the predictive mean matching method.
+full2 = mice(full[,c(7,8,9,14,15,21,22,23,27,29,37,41,43,51,55,57)], method=c("pmm","pmm","pmm","pmm","pmm","pmm","pmm","pmm","pmm","pmm","pmm","pmm","pmm","pmm","pmm","pmm"),m=1)
+print(full2)
+full3 = complete(full2, 1)
+
+names(which(colSums(is.na(full3)) > 0))
+#No longer have NA values in new subset of NA variables
+
+library(lattice)
+#Lets now observe the distribution of the observed raw data vs the imputed values for the SSTP and DRYT variables from the Halifax Buoy.
+stripplot(full2, pch=20, cex=1.2)
+xyplot(full3, SSTP_h ~ DRYT_h | .imp, pch=20, cex=1.4)
+
+
+full$VWH._h = full3$VWH._h
+full$VCMX_h = full3$VCMX_h
+full$VTP._h = full3$VTP._h
+full$DRYT_h = full3$DRYT_h
+full$SSTP_h = full3$SSTP_h
+
+full$VWH._l = full3$VWH._l
+full$VCMX_l = full3$VCMX_l
+full$VTP._l = full3$VTP._l
+full$ATMS_l = full3$ATMS_l
+full$SSTP_l = full3$SSTP_l
+
+full$VTP._b = full3$VTP._b
+full$ATMS_b = full3$ATMS_b
+full$SSTP_b = full3$SSTP_b
+
+full$VTP._e = full3$VTP._e
+full$ATMS_e = full3$ATMS_e
+full$SSTP_e = full3$SSTP_e
+
+
+#The recorded data from the buoy variables is now in a much better state now that we have dealt with the obvious data recording error outliers.
+#Our dataset is finally now in a form that we are comfortable with to move on to model selection.
+
+```
+
+##Checking for Gaps in Data Spanning from 2004-2022
+
+```{r}
+gaps = c()
+
+for (i in 1:length(full[,1])){
+  gaps[i] = diff(full$TIME[i])
+}
+
+
+
+fullimp = full
+
+#Next we will remove columns/variables that are not needed for modeling.
+str(fullimp)
+
+fullimp = fullimp[,-c(1,2,16,30,44,58)]
+
+fullimp$DAY = as.numeric(fullimp$DAY)
+fullimp$MONTH = as.numeric(fullimp$MONTH)
+fullimp$YEAR = as.numeric(fullimp$YEAR)
+
+
+save(fullimp, file = "fullimp.RData")
+
+```
+
+
