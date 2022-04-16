@@ -1,4 +1,4 @@
-\textbf{Keywords}: \textit{Oceanography, Wave Height, Data Manipulation, Random Forest, Prediction, RMSE}
+**KEYWORDS** *Oceanography, Wave Height, Data Manipulation, Random Forest, Prediction, RMSE*
 
 This repository aims to satisfy the project outline for STAT 4620 - Data Analysis
 
