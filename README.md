@@ -1,3 +1,8 @@
+**STAT 4620/5620 Final Project: Predicting Wave Heights Using Random Forest Methods** 
+Alexander Boutilier  B00801543, Seoyeon (Cali) Park B00768397
+Winter 2021/2022
+
+
 **KEYWORDS** *Oceanography, Wave Height, Data Manipulation, Random Forest, Prediction, RMSE*
 
 This repository aims to satisfy the project outline for STAT 4620 - Data Analysis
