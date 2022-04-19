@@ -102,12 +102,13 @@ mean((yhat_bag$yPred - test$VWH._h)^2)
 
 
 
-ggplot(data.frame(test,pred=yhat_bag$yPred),mapping=aes(x=pred,y=VWH._h))+geom_point()+geom_abline(mapping=aes(slope=1,intercept=0))+labs(title="Predicted vs Observed Significant Wave Height",y="Observed Wave Height (m)", x="Predicted Wave Height (m)")+theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+ggplot(data.frame(test,pred=yhat_bag$yPred),mapping=aes(x=pred,y=VWH._h))+geom_point()+geom_abline(mapping=aes(slope=1,intercept=0))+labs(title="Predicted vs Observed Significant Wave Height",y="Observed Wave Height (m)", x="Predicted Wave Height (m)")+theme_minimal()+theme(plot.title = element_text(hjust = 0.5), legend.position="none")
 
-ggplot(data.frame(test, residuals=(yhat_bag$yPred - test$VWH._h)),mapping=aes(x=VWH._h,y=residuals))+geom_point()+labs(title="Residuals vs Predicted Significant Wave Height",y="Residual Error (m)", x="Predicted Wave Height (m)")+theme(plot.title = element_text(hjust = 0.5), legend.position="none")
-#The residuals of the predictions are densly located around 0 and has a small number of outliers as VWH becomes larger than 6-7.5 metres.
+
+ggplot(data.frame(pred=yhat_bag$yPred, residuals=(yhat_bag$yPred -test$VWH._h)),mapping=aes(x=pred,y=residuals))+geom_point()+labs(title="Residuals vs Predicted Significant Wave Height",y="Residual Error (m)", x="Predicted Wave Height (m)")+theme_minimal()+theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+
+#The residuals of the predictions are densely located around 0 and has a small number of outliers as VWH becomes larger than 6-7.5 metres.
 #They also seems to have a tail like pattern as significant wave heights approach 0.
-
 
 
 
