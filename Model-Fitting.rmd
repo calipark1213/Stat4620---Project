@@ -1,0 +1,126 @@
+---
+title: "Model Fitting"
+output: html_document
+---
+
+```{r}
+load("C:/Users/Administrator/Documents/STAT4620/Project/fullimp.RData")
+
+```
+
+
+```{r}
+library(Rborist)
+
+
+train = fullimp[1:45000,]
+validation = fullimp[45000:55000,]
+test = fullimp[55000:64933, ]
+
+
+#Fit a default initial random forest model:
+model1 = Rborist(train[,-5], train$VWH._h, nTree = 500, withRepl = TRUE, minNode = 10, minRatio = 0.1)
+
+#Initial Random Forest Model's Performance on training data:
+model1$validation$mse
+model1$validation$rsq
+
+
+## Model Hyperparameter Selection
+
+#To perform a larger grid search across several hyperparameters we’ll need to create a grid and loop through each hyperparameter combination. 
+hyper_grid <- expand.grid(
+  mtry       = seq(1, 11, by = 1),
+  node_size  = seq(2, 10, by = 2),
+  OOB_RMSE   = 0
+)
+#We have left the sample size to default because if we add different options for it the number of combinations will be much larger and will take several hours to complete running.
+#The total number of combinations of hyperparameters we are testing.
+nrow(hyper_grid)
+
+#We then want to loop through each hyperparameter combination and since our dataset is so large we will use 500 trees which is enough to achieve a stable error rate.
+for(i in 1:nrow(hyper_grid)) {
+  model2 <- Rborist(train[,-5], train$VWH._h, 
+    nTree           = 500,
+    predFixed       = hyper_grid$mtry[i],
+    minNode         = hyper_grid$node_size[i],
+  )
+  yhat_bag = predict(model2, newdata=validation)
+  MSE = mean((yhat_bag$yPred - validation$VWH._h)^2)
+  hyper_grid$OOB_RMSE[i] <- sqrt(MSE) 
+}
+
+hyper_grid %>% 
+  dplyr::arrange(OOB_RMSE) %>%
+  head(20)
+
+OOB_RMSE_DF = data.frame(hyper_grid %>% 
+  dplyr::arrange(OOB_RMSE) %>%
+  head(55))
+
+ggplot(data=OOB_RMSE_DF, aes(x=as.factor(mtry), y=OOB_RMSE))+geom_boxplot()+ggtitle("Number of Trial Predictors for a Split (mtry) vs OOB RMSE")+theme(plot.title = element_text(hjust = 0.5), legend.position="none")+labs(x="mtry", y="OOB RMSE")+theme_minimal()
+
+#We can clearly see as the number of trial predictors for a split increases to 11, there is a substantial decrease in the out of the bag root mean squared error rate going from over 1 to around 0.5. Additionally, for mtry of 9 and 11 there is very small variance in the OOB error rate given the different minimum node size. Thus, the number of trial predictors for a split will be selected to be 11 and we will plot the varying minimum node sizes to select the best option.
+
+
+#The optimal number of trial predictors for a split (mtry) is 11 with a minimum node size (node_size) of 6 achieving a out of the bag root mean squared error of 0.4961735 respectively. 
+
+
+#Evaluate final selected model on test dataset to observe its prediction performance:
+
+#Create histogram of the RMSE 
+TEST_RMSE_best <- vector(mode = "numeric", length = 50)
+
+for(i in seq_along(TEST_RMSE_best)) {
+  
+  model2_best <- Rborist(train, train$VWH._h,
+    num.trees       = 500,
+    predFixed       = 11,
+    minNode         = 6
+  )
+  yhat_bag = predict(model2_best, newdata=test)
+  MSE = mean((yhat_bag$yPred - test$VWH._h)^2)
+  TEST_RMSE_best[i] <- sqrt(MSE)
+}
+hist(TEST_RMSE_best, breaks = 20, main="RF Test Data RMSE", xlab="OOB RMSE (m)")
+
+
+
+#Compare the performance of our RF on training set, validation set, and test set via mean squared error (MSE) and :
+
+#Training set:
+model2_best$validation$mse
+model2_best$validation$rsq
+
+#Validation set:
+yhat_bag = predict(model2_best, newdata=validation)
+mean((yhat_bag$yPred - validation$VWH._h)^2)
+
+#Test set:  
+yhat_bag = predict(model2_best, newdata=test)
+mean((yhat_bag$yPred - test$VWH._h)^2)
+
+
+
+ggplot(data.frame(test,pred=yhat_bag$yPred),mapping=aes(x=pred,y=VWH._h))+geom_point()+geom_abline(mapping=aes(slope=1,intercept=0))+labs(title="Predicted vs Observed Significant Wave Height",y="Observed Wave Height (m)", x="Predicted Wave Height (m)")+theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+
+ggplot(data.frame(test, residuals=(yhat_bag$yPred - test$VWH._h)),mapping=aes(x=VWH._h,y=residuals))+geom_point()+labs(title="Residuals vs Predicted Significant Wave Height",y="Residual Error (m)", x="Predicted Wave Height (m)")+theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+#The residuals of the predictions are densly located around 0 and has a small number of outliers as VWH becomes larger than 6-7.5 metres.
+#They also seems to have a tail like pattern as significant wave heights approach 0.
+
+
+
+
+#Variable importance:
+
+importance_vals = model2_best$training$info
+importance = fullimp[0,]
+importance = importance[-5]
+importance[1,] = importance_vals
+
+importance = sort(importance, decreasing=FALSE)
+
+barplot(unlist(importance[(length(importance)-14):length(importance)]), horiz=TRUE, las=2, main="RF Variable Importance (Top 15)", cex.names = 0.9)
+
+
+```
